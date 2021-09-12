@@ -1,0 +1,9 @@
+<?xml version="1.0" encoding="UTF-8" standalone="no"?>
+<keys
+   name="User Shortcuts">
+  <bind
+     key="t"
+     modifiers="Ctrl"
+     action="org.inkscape.effect.textext"
+     display="true" />
+</keys>
