@@ -1,2 +1,7 @@
+# See following link for examples
+# https://github.com/github/gitignore/blob/master/Python.gitignore
+
 **/.ipynb_checkpoints
 **/.vscode
+**/__pycache__
+*.py[cod]

@@ -1,7 +1,41 @@
+// // Migrate to 1.0.0
+// const {
+//     aceVimMap,
+//     mapkey,
+//     imap,
+//     imapkey,
+//     getClickableElements,
+//     vmapkey,
+//     map,
+//     unmap,
+//     cmap,
+//     addSearchAlias,
+//     removeSearchAlias,
+//     tabOpenLink,
+//     readText,
+//     Clipboard,
+//     Front,
+//     Hints,
+//     Visual,
+//     RUNTIME
+// } = api;
+
 // My settings
 settings.scrollStepSize = 140;
 const searchleader = 's'; // Type <s+ALIAS> to search selected
 const googleleader = '\`'; // Type <`+ALIAS> to open search box
+
+// Remove default seaerch aliases
+default_search_aliases = ['b', 'd', 'e', 'g', 'h', 's', 'w', 'y']
+for (const s of default_search_aliases) {
+    console.log('Removing alias: ' + s);
+    api.removeSearchAlias(s);
+    // api.removeSearchAliasX(s, 's');
+    api.unmap(`s${s}`);
+    api.unmap(`o${s}`);
+    api.vunmap(`s${s}`);
+    api.vunmap(`o${s}`);
+}
 
 // Helper function to make google search url
 function GoogleSearchUrl () {
@@ -12,6 +46,7 @@ function GoogleSearchUrl () {
     }
     return url;
 }
+// Helper function to make google suggestion url
 function GoogleSuggestionUrl() {
     var url = 'https://www.google.com/complete/search?client=chrome-omni&gs_ri=chrome-ext&oit=1&cp=1&pgcl=7&q=';
     for (var i = 0; i < arguments.length; i++) {
@@ -20,17 +55,17 @@ function GoogleSuggestionUrl() {
     }
     return url;
 }
+// Callback to parse google suggestion
 function GoogleSuggestionCallback(response) {
     var res = JSON.parse(response.text);
     return res[1];
 }
-
+// Add alias to search google with specific prefixed keyword
 function AddGoogleAlias(s) {
     // addSearchAliasX(s.alias, s.name, GoogleSearchUrl(s.search), searchleader);
-    addSearchAliasX(s.alias, s.name, GoogleSearchUrl(s.search), searchleader, GoogleSuggestionUrl(s.search), GoogleSuggestionCallback);
-    mapkey(`${googleleader}${s.alias}`, `#8Search ${s.name}`, () => Front.openOmnibar({ type: "SearchEngine", extra: s.alias }));
+    api.addSearchAlias(s.alias, `google with prefix: ${s.name}`, GoogleSearchUrl(s.search), searchleader, GoogleSuggestionUrl(s.search), GoogleSuggestionCallback);
+    api.mapkey(`${googleleader}${s.alias}`, `#8Search ${s.name} with google`, () => Front.openOmnibar({ type: "SearchEngine", extra: s.alias }));
 }
-
 aliases = [
   { name: 'numpy', alias: 'np', search: 'numpy', },
   { name: 'pytorch', alias: 'pt', search: 'pytorch', },
@@ -41,10 +76,26 @@ aliases = [
   { name: 'sklearn', alias: 'sk', search: 'sklearn', },
   { name: 'seaborn', alias: 'sn', search: 'seaborn', },
 ];
-
 for (var s in aliases) {
   AddGoogleAlias(aliases[s]);
 }
+
+// Add non-google aliases
+api.addSearchAlias('d', 'thefreedictionary', 'https://www.thefreedictionary.com/');
+api.addSearchAlias('k', 'Korean dictionary', 'https://dict.naver.com/search.dict?dicQuery=');
+api.addSearchAlias('g', 'google', 'https://www.google.com/search?q=', 's', 'https://www.google.com/complete/search?client=chrome-omni&gs_ri=chrome-ext&oit=1&cp=1&pgcl=7&q=', function(response) {
+    var res = JSON.parse(response.text);
+    return res[1];
+});
+api.addSearchAlias('y', 'youtube', 'https://www.youtube.com/results?search_query=', 's',
+'https://clients1.google.com/complete/search?client=youtube&ds=yt&callback=cb&q=', function(response) {
+    var res = JSON.parse(response.text.substr(9, response.text.length-10));
+    return res[1].map(function(d) {
+        return d[0];
+    });
+});
+// addSearchAliasX('d', 'thefreedictionary', 'https://www.thefreedictionary.com/', 'o');
+// mapkey(`${searchleader}d`, `#8Search dict`, () => Front.openOmnibar({ type: "SearchEngine", extra: 'd' }));
 
 // Syntax for adding aliases
 // addSearchAlias(alias, prompt, search_url, suggestion_url, callback_to_parse_suggestion);
@@ -58,6 +109,9 @@ for (var s in aliases) {
 //     var res = JSON.parse(response.text);
 //     return res[1];
 // });
+
+// Syntax for removing alias
+// removeSearchAliasX(alias, search_leader_key, only_this_site_key);
 
 // // an example to create a new mapping `ctrl-y`
 // mapkey('<ctrl-y>', 'Show me the money', function() {

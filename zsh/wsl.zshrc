@@ -76,3 +76,7 @@ export BROWSER='/mnt/c/Program Files (x86)/Google/Chrome/Application/chrome.exe'
 autoload bashcompinit && bashcompinit
 autoload -Uz compinit && compinit
 complete -C 'aws_completer' aws
+
+# Ruby gems
+export GEM_HOME="$HOME/gems"
+export PATH="$HOME/gems/bin:$PATH"
