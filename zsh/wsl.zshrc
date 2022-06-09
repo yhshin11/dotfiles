@@ -44,14 +44,16 @@ unset __conda_setup
 # Activate base conda environment
 conda activate base
 # Activate virtualenvwrapper
-source virtualenvwrapper.sh
+export WORKON_HOME=$HOME/.virtualenvs
+export PROJECT_HOME=$HOME/Devel
+source $HOME/.local/bin/virtualenvwrapper.sh
 
 # Export pip packages
 export PATH="${PATH}:/home/yhshin/.local/bin/"
 
-# navi
-export PATH="${PATH}:/home/yhshin/.cargo/bin/"
-eval "$(navi widget zsh)"
+# # navi
+# export PATH="${PATH}:/home/yhshin/.cargo/bin/"
+# eval "$(navi widget zsh)"
 
 # fzf
 [ -f ~/.fzf.zsh ] && source ~/.fzf.zsh
@@ -63,10 +65,11 @@ eval "$(fasd --init auto)"
 
 # tmux
 export TERM=xterm-256color
+# alias tmux="tmux -f $XDG_CONFIG_HOME/tmux/tmux.conf"
 
 # dotfiles & stow
 export DOTFILES="$HOME/dotfiles"
-export STOW_DIR=$DOTFILES
+# export STOW_DIR=$DOTFILES
 
 # wsl browser
 export BROWSER='/mnt/c/Program Files (x86)/Google/Chrome/Application/chrome.exe'

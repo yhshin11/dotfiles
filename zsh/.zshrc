@@ -27,4 +27,5 @@ source ~/powerlevel10k/powerlevel10k.zsh-theme
 export DISPLAY=$(cat /etc/resolv.conf | grep nameserver | awk '{print $2; exit;}'):0.0 #GWSL
 export PULSE_SERVER=tcp:$(cat /etc/resolv.conf | grep nameserver | awk '{print $2; exit;}') #GWSL
 
+source $HOME/dotfiles/zsh/common.zshrc
 source $HOME/dotfiles/zsh/wsl.zshrc

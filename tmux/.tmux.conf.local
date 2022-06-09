@@ -338,17 +338,27 @@ set -g mouse on
 set -g mode-keys vi
 
 # replace C-b by C-a instead of using both prefixes
-# set -gu prefix2
-# unbind C-a
-# unbind C-b
-# set -g prefix C-a
-# bind C-a send-prefix
+#set -gu prefix2
+#unbind C-a
+#unbind C-b
+#set -g prefix C-a
+#bind C-a send-prefix
 
 # move status line to top
 #set -g status-position top
 
-bind \\ last-window # move to last active window
-bind C new-window -c "#{pane_current_path}" # Open new window in current path
+# Open new window in current path
+bind C new-window -c "#{pane_current_path}"
+
+# Move to last active window
+bind \\ last-window
+
+# Send Up and Down keys for the mouse wheel
+#bind -n WheelUpPane if -Ft= "#{mouse_any_flag}" "send -M" "send Up"
+#bind -n WheelDownPane if -Ft= "#{mouse_any_flag}" "send -M" "send Down"
+
+# Scroll mouse wheel up to enter copy mode
+bind -n WheelUpPane copy-mode -e
 
 
 # -- tpm -----------------------------------------------------------------------
