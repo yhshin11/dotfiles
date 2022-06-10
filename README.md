@@ -15,6 +15,7 @@ sudo apt install -y emacs
 ################
 # Clone dotfiles
 ################
+# Probably want to generate ssh key and add to github
 git clone git@github.com:yhshin11/dotfiles.git
 
 ################
@@ -74,6 +75,11 @@ cd clvv-fasd-4822024
 PREFIX=$HOME/.local make install
 cd -
 
+################
+# vim/nvim
+################
+ln -s ~/dotfiles/vim/.vimrc ~/.vimrc
+ln -s ~/dotfiles/nvim/.config/nvim/ ~/.config/nvim
 ```
 
 ```bash
