@@ -10,6 +10,9 @@ Create symlinks into relevant paths.
 sudo apt update
 sudo apt install -y zsh
 sudo apt install -y tmux
+# Alternative for tmux
+# Link to Appimage binaries are available here:
+# https://github.com/tmux/tmux/wiki/Installing
 sudo apt install -y emacs
 
 ################
@@ -83,6 +86,19 @@ ln -s ~/dotfiles/nvim/.config/nvim/ ~/.config/nvim
 ```
 
 ```bash
+################
+# pandoc
+################
 sudo apt install pandoc
 sudo apt-get install texlive-latex-base texlive-fonts-recommended texlive-fonts-extra texlive-latex-extra
+
+################
+# jekyll and theme
+################
+# Installation instructions:
+# https://jekyllrb.com/docs/installation/ubuntu/
+# Prerequisites
+sudo apt-get install ruby-full build-essential zlib1g-dev
+# Install jekyll and bundler
+gem install jekyll bundler
 ```

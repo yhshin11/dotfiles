@@ -138,7 +138,7 @@ export PROJECT_HOME=$HOME/Devel
 source $HOME/.local/bin/virtualenvwrapper.sh
 
 # Export pip packages
-export PATH="${PATH}:/home/yhshin/.local/bin/"
+export PATH="/home/yhshin/.local/bin/:${PATH}"
 
 # # navi
 # export PATH="${PATH}:/home/yhshin/.cargo/bin/"
