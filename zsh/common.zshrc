@@ -101,6 +101,7 @@ alias jn='jupyter notebook'
 alias cht='cht.sh'
 alias tn='tmux new -s' # Open new tmux session
 alias ta='tmux attach -t' # Attach to tmux session
+alias tt='tmux attach -t' # FIXME: Create if doesn't exist. Otherwise attach
 alias ts='tmux split-window -h' # Split current window and run command
 
 em() {
