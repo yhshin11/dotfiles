@@ -371,6 +371,7 @@ set -g automatic-rename-format "#{b;s|yhshin|~:pane_current_path} | #{pane_curre
 
 # set -g automatic-rename-format '#{pane_current_path}'
 
+tmux_conf_theme_terminal_title="❐ #S ● #I #W"
 
 
 
