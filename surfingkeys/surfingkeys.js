@@ -1,41 +1,38 @@
-// // Migrate to 1.0.0
-// const {
-//     aceVimMap,
-//     mapkey,
-//     imap,
-//     imapkey,
-//     getClickableElements,
-//     vmapkey,
-//     map,
-//     unmap,
-//     cmap,
-//     addSearchAlias,
-//     removeSearchAlias,
-//     tabOpenLink,
-//     readText,
-//     Clipboard,
-//     Front,
-//     Hints,
-//     Visual,
-//     RUNTIME
-// } = api;
+// Migrating settings
+// https://github.com/brookhong/Surfingkeys/wiki/Migrate-your-settings-from-0.9.74-to-1.0
+const {
+    aceVimMap,
+    mapkey,
+    imap,
+    imapkey,
+    getClickableElements,
+    vmapkey,
+    map,
+    unmap,
+    unmapAllExcept,
+    vunmap,
+    cmap,
+    addSearchAlias,
+    removeSearchAlias,
+    tabOpenLink,
+    readText,
+    Clipboard,
+    Front,
+    Hints,
+    Visual,
+    RUNTIME
+} = api;
 
 // My settings
 settings.scrollStepSize = 140;
 const searchleader = 's'; // Type <s+ALIAS> to search selected
 const googleleader = '\`'; // Type <`+ALIAS> to open search box
 
-// Remove default seaerch aliases
-default_search_aliases = ['b', 'd', 'e', 'g', 'h', 's', 'w', 'y']
-for (const s of default_search_aliases) {
-    console.log('Removing alias: ' + s);
-    api.removeSearchAlias(s);
-    // api.removeSearchAliasX(s, 's');
-    api.unmap(`s${s}`);
-    api.unmap(`o${s}`);
-    api.vunmap(`s${s}`);
-    api.vunmap(`o${s}`);
-}
+// Change omnibar keyboard shortcuts
+// Note: Some key bindings are unavailable, e.g. browser shortcuts Ctrl-j
+api.cmap('<Alt-j>', '<Tab>');
+api.cmap('<Alt-k>', '<Shift-Tab>');
+
 
 // Helper function to make google search url
 function GoogleSearchUrl () {

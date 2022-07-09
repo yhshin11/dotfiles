@@ -363,6 +363,8 @@ bind -n WheelUpPane copy-mode -e
 # Rename windows
 set -g status-interval 5
 set -g automatic-rename on
+# See here for reference:
+# https://unix.stackexchange.com/a/598896
 set -g automatic-rename-format "#{b;s|yhshin|~:pane_current_path} | #{pane_current_command}"
 # set -g automatic-rename-format "#{s|$HOME|~|:pane_current_path}"
 # set -g automatic-rename-format "#{s|$HOME|~|:pane_current_path}"
