@@ -113,6 +113,17 @@ em() {
     fi
 }
 
+# Auto set terminal title
+# https://superuser.com/a/633947
+case $TERM in
+    xterm*)
+        # precmd () {print -Pn "\e]0;string\a"}
+        # Replace $HOME with ~
+        precmd () {print -Pn "\e]0;${PWD/$HOME/\~}\a"}
+        ;;
+esac
+
+
 # >>> conda initialize >>>
 # !! Contents within this block are managed by 'conda init' !!
 __conda_setup="$('/home/yhshin/miniconda3/bin/conda' 'shell.zsh' 'hook' 2> /dev/null)"
