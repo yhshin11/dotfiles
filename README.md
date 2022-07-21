@@ -1,7 +1,10 @@
 # dotfiles
 
 Dotfiles for some tools that I use.
-Create symlinks into relevant paths.
+Create symlinks into relevant paths so that the config files are accessible at expected paths, e.g. `~/.zshrc` for zsh startup file.
+
+This repository is mostly here for my personal convenience, but feel free to borrow/steal whatever you find useful.
+
 
 ## Clean setup
 
@@ -20,6 +23,8 @@ sudo apt install -y emacs
 ################
 # Probably want to generate ssh key and add to github
 git clone git@github.com:yhshin11/dotfiles.git
+ln -s ~/dotfiles/git/.gitconfig ~/.gitconfig
+ln -s ~/dotfiles/git/.gitignore_global ~/.gitignore_global
 
 ################
 # zsh setup
@@ -38,6 +43,9 @@ bash Miniconda3-latest-Linux-x86_64.sh
 
 # make and other build utils
 sudo apt-get install build-essential
+
+# Install keychain to manage ssh-keys
+sudo apt install keychain
 ```
 
 ```bash
@@ -101,4 +109,17 @@ sudo apt-get install texlive-latex-base texlive-fonts-recommended texlive-fonts-
 sudo apt-get install ruby-full build-essential zlib1g-dev
 # Install jekyll and bundler
 gem install jekyll bundler
+```
+
+```bash
+################
+# Common pip packages
+################
+pip install pandas
+pip install seaborn
+pip install sklearn
+pip install jupyterlab
+pip install jupytext
+pip install jupyterlab-vim
+pip install tensorboard
 ```
