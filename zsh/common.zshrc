@@ -181,3 +181,6 @@ complete -C 'aws_completer' aws
 # Ruby gems
 export GEM_HOME="$HOME/gems"
 export PATH="$HOME/gems/bin:$PATH"
+
+# keychain to manage ssh-agent
+eval `keychain --eval --agents ssh id_ed25519 id_rsa`
