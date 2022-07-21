@@ -5,6 +5,7 @@ Create symlinks into relevant paths so that the config files are accessible at e
 
 This repository is mostly here for my personal convenience, but feel free to borrow/steal whatever you find useful.
 
+**WARNING**: Do not blindly copy or execute the contents of this repo if you do not fully understand what they're doing.
 
 ## Clean setup
 
