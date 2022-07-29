@@ -123,4 +123,11 @@ pip install jupyterlab
 pip install jupytext
 pip install jupyterlab-vim
 pip install tensorboard
+
+################
+# DL packages
+################
+pip3 install torch torchvision torchaudio --extra-index-url https://download.pytorch.org/whl/cu116
+pip install pytorch-lightning
+  
 ```
