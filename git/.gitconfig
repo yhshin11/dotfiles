@@ -3,10 +3,10 @@
 	name = Young Ho Shin
 [core]
 	excludesfile = ~/.gitignore_global
-[filter "lfs"]
-	process = git-lfs filter-process
-	required = true
-	clean = git-lfs clean -- %f
-	smudge = git-lfs smudge -- %f
+# [filter "lfs"]
+# 	process = git-lfs filter-process
+# 	required = true
+# 	clean = git-lfs clean -- %f
+# 	smudge = git-lfs smudge -- %f
 [credential]
 	helper = store
