@@ -45,7 +45,7 @@ bash Miniconda3-latest-Linux-x86_64.sh
 # make and other build utils
 sudo apt-get install build-essential
 
-# Install keychain to manage ssh-keys
+# [Optional] Install keychain to manage ssh-keys
 sudo apt install keychain
 ```
 
