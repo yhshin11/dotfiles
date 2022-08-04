@@ -183,10 +183,14 @@ export GEM_HOME="$HOME/gems"
 export PATH="$HOME/gems/bin:$PATH"
 
 # keychain to manage ssh-agent
-if [[ -f $HOME/.ssh/id_ed25519 ]]; then
-    eval `keychain --eval --quiet --agents ssh id_ed25519`
-fi
+KEYFILES=""
 if [[ -f $HOME/.ssh/id_rsa ]]; then
+    KEYFILES="id_rsa ${KEYFILES}"
 fi
-    eval `keychain --eval --quiet --agents ssh id_rsa`
-
+if [[ -f $HOME/.ssh/id_ed25519 ]]; then
+    KEYFILES="id_ed25519 ${KEYFILES}"
+fi
+if [ ! -z "$KEYFILES" ]; then
+    # echo "Found keys! Adding to ssh-agent"
+    eval $(keychain --eval --quiet --agents ssh $(echo $KEYFILES))
+fi
