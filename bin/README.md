@@ -1,0 +1,1 @@
+This directory contains custom scripts that can be used as executables when added to `PATH`.

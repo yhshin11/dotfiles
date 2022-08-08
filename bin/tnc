@@ -1,0 +1,586 @@
+#!/usr/bin/perl -w
+
+# TODO: 
+# ADD testapps() checks on remote side to assist in setting up correct version of utils.
+# need to steal marian's Mac to check for mac compatibility
+# check file names for spaces and quote them internally
+# bash check for ability to do subshells correctly
+# finish the --exclude flag.
+
+# CHANGELOG
+# - changed nc flags to be compatible with at least 2 versions of nc (bsd and gnu)
+# - local check of utils and logging of versions.
+# - sub'ed ssh setup.  seems to work ok
+# - randomized PORT number assignment; can still set it.
+# - changed md5sum to shasum for better compatibility betw Linux/MacOSX
+# - used env to set paths to apps
+# - added code to allow tnc to continue if no 'pv'
+# - changed pv options to remove '-a' bc some versions don't have it.
+# - added code to use any of gzip, bzip2, pigz, pbzip2, xz, or lz4 as compression
+
+# push to usual test platforms
+# scp ~/bin/tnc moo:~/public_html; scp ~/bin/tnc hjm@bduc:~;  scp ~/bin/tnc hmangala@hpcs:~
+
+use strict;
+use Getopt::Long;
+use Env qw(HOME PATH);
+use File::Basename;
+use vars qw( $VERSION $VDATE $DATE $NOW $USER $RHOST $COMPRESS $PORT $PROGRESS 
+$INTERFACE $MAILTO $UDP $TEST $EXCLUDE $EXCLUDE_FILE $HELP $QUIET $versiontxt 
+$VER $NC $PV $TAR $SSH $THISHOST $PORT $PAYLOAD $DEBUG $UNPACK $LNC 
+$LTAR  $LOCALFILE $DIRSTATUS $PROBECMD $ASKPASS $WAIT $REMOTESPEC $TNCCMD 
+$REMOTELOGIN $REMOTEPATH $REMOTEHOST $RNC $RTAR $L2R $LOCAL_TAR $REMOTE_FILES 
+$SHAFL $LBASH $RBASH $WCFL $SHASUM $DCMPR $PIPEDCMPR @UTILS $EX_FLAG $EX_FILE
+);
+
+###################### CONFIGURATION SETINGS ######################
+# Local app paths
+$LNC 	= "/usr/bin/env -i nc";
+$LBASH 	= "/usr/bin/env -i bash";
+$LTAR 	= "/usr/bin/env -i tar";
+$PV 	= "/usr/bin/env -i pv"; ## have to check on 1st run.  bypass if not available.
+$THISHOST = `hostname -f`; chomp $THISHOST;
+$SHASUM = "md5sum"; # can be changed to shasum or md5sum if it doesn't exist on both sides
+$SSH 	= "/usr/bin/env -i ssh";
+
+# REMOTE app paths - if in doubt, set to the bare name and let the remote 
+# system find them.
+$RNC = "nc"; # nc is stored in different places in different distros.
+$RTAR = "tar";
+$RBASH = "bash";
+###################################################################
+
+# initialization
+#UTILS is a list of all the apps that this thing uses.  tnc will test all of them
+# via testapps() and dump the file in ~/.tnc_test-apps.log at each run.
+@UTILS = qw(nc tar hostname shasum pv ssh gzip pigz bzip2 pbzip2 lz4 xz wc less ssh-copy-id ssh-keygen);
+
+$HELP = 0;
+$PAYLOAD = ""; # what gets transferred
+$UNPACK=0;
+$ASKPASS=0;
+$WAIT=1; # if using ssh keys, this should be enough. Change to 5 if using ASKPASS.
+$PIPEDCMPR = ""; # default should be nothing
+$VERSION = "1.6";
+$VDATE = "Sept 28, 2015";
+$NOW = `date`;
+$DATE=`date +"%T_%F" | sed 's/:/./g' `; chomp $DATE;
+$SHAFL = ".tnc.sha." . $DATE;
+$WCFL  = ".tnc.wc." . $DATE;
+$EX_FLAG = $EX_FILE = $DCMPR = "";
+$versiontxt = <<VERSION;
+
+tnc version [$VERSION] 
+Last modified on [$VDATE]
+
+Copyright Harry Mangalam, OIT, UC Ivine, 2015
+<harry.mangalam\@uci.edu>, <hjmangalam\@gmail.com>
+
+This software and documentation is released under
+the FSF Affero General Public License (GPL) version 3.
+<http://www.gnu.org/licenses/agpl-3.0.html>
+VERSION
+
+
+&GetOptions(
+  "askpass!"	=> \$ASKPASS, # DO NOT ask to set up ssh keys, use password auth
+  "compress=s" 	=> \$COMPRESS,  # gzip, bzip2, pigz, 
+  "p=i" 	=> \$PORT,  # 
+  "port=i" 	=> \$PORT,  # 
+#  "UDP!" 	=> \$UDP,  # 
+#  "t=i" 	=> \$TEST,  # test connection by copying /dev/zero output to remote
+#  "test=i" 	=> \$TEST,  # 
+  "x=s" 	=> \$EXCLUDE,  # whitespace-delimited list '*.gz *.o *.out *junk*'
+  "excludes=s" 	=> \$EXCLUDE,  # add list of --exclude='single-pattern'
+  "exclude-from=s" => \$EXCLUDE_FILE,  # file to read exclude patterns from
+  "h!"      	=> \$HELP,  # dump help into less as in clusterfork.
+  "help!"   	=> \$HELP,
+#  "quiet!"  	=> \$QUIET, # shhhhh!
+  "unpack!"	=> \$UNPACK, #if a tarball, unpack it on the remote side.
+  # NB: 'unpack' could be implicit.  If the remote target is an existing dir, then 
+  # unpack the files in there. If it's neither a file nor a dir, assume it's the name of the 
+  # tarball file and so the dir that it lives in has to be verified and created if it doesn't
+  # exist.
+  # if it's a file name, leave the tarball still packed.
+  # so if the dir exists as a dir then unpack it. if it's not a dir, then that's the name of 
+  # the tarball. Hmmmmmm.
+  "v!"		=> \$VER, #
+  "version!"	=> \$VER, #
+  "debug!"	=> \$DEBUG, #
+);
+
+# set up variable definitions
+if ($VER) {print $versiontxt; exit;}
+if ($#ARGV < 0 || $HELP){ usage();}
+if (! defined $LTAR ) {$LTAR = `which tar`; chomp $LTAR;}
+if (! defined $LNC ) {$LNC = `which nc`; chomp $LNC;}
+if (! defined $PV ) {$PV = `which pv`; chomp $PV;}
+if (! defined $SSH ) {$SSH = `which ssh`; chomp $SSH;}
+if (! defined $LBASH) {$LBASH = `which bash`; chomp $LBASH;}
+if (! defined $RNC ) {$RNC = "nc"; chomp $RNC;}
+if (! defined $RBASH) {$RBASH = "bash"; chomp $LBASH;}
+if (! defined $PORT) {$PORT = 10000 + int(rand(10000));} # random between 10000 and 20000
+if (! defined $EXCLUDE) {$EXCLUDE = ""; }
+else {
+  my $N = my @L = split /\s+/, $EXCLUDE;
+  for (my $i=0; $i< $N; $i++) {$EX_FLAG .= '--exclude="' . $L[$i] . '" ';  }
+}
+#&debug("EX_FLAG = [$EX_FLAG]", __LINE__);
+
+if (! defined $EXCLUDE_FILE) {$EXCLUDE_FILE = ""; }
+elsif (! -e $EXCLUDE_FILE) { die "FATAL: The exclude file you specified [$EXCLUDE_FILE] doesn't exist. 
+  Please check the path, dir, or permissions and try again.\n\n";}
+else {$EX_FILE = "--exclude-from=" . qq("$EXCLUDE_FILE" );}
+if ($DEBUG){ &debug("PORT assigned: [$PORT]",__LINE__);}
+if ($ASKPASS) {$WAIT=5;} # extend the wait period if need to enter password
+
+if ($DEBUG) {
+  &debug("# of args = $#ARGV",__LINE__);
+  foreach my $i (0..$#ARGV){ print "\targ[$i] = $ARGV[$i]\n"};
+}
+
+# only test if we haven't tested before
+if (! -e "$HOME/.tnc.test") { 
+  print "INFO: I don't see a [~/.tnc.test] file, so I'm going to test all the apps.
+  If you want this test run again, delete that file first.\n";
+  &testapps(@UTILS);
+}
+
+#   eval {
+#       local $SIG{ALRM} = sub { die "alarm\n" }; # NB: \n required
+#       alarm 2;
+#       my $sshout = `ssh hjmangalam\@fs`;
+#       alarm 0;
+#   };
+#   if ($@) {
+#       print "Did it time out??\n";
+#       die unless $@ eq "alarm\n";   # propagate unexpected errors
+#       # timed out
+#   }
+#   else {
+#       print "INFO: OK - ssh keys set up - continue...\n"
+#       # didn't
+#   }
+
+my $pvpath = `which pv`;
+if ($pvpath eq "") {
+  print "HINT: You don't have 'pv' installed.  It's not necessary, but it gives
+  realtime and average bandwidth thru the transfer pipe.\n";
+  $PV = ""; 
+} else {
+  $PV .= " -trb | "; 
+}
+# determine whether the data is going  Local -> Remote or the reverse.
+my $LAST_TERM = $ARGV[$#ARGV];
+my $SEC_LAST = $ARGV[$#ARGV - 1];
+
+if ($LAST_TERM !~ /:/ && $SEC_LAST =~ /:/) {
+  $REMOTESPEC = $ARGV[$#ARGV - 1]; # PULL (L <- R) [tnc user@remote:'dir file dir file' local.tar]
+  $SEC_LAST = $LOCALFILE = $ARGV[$#ARGV];
+} else { $REMOTESPEC = $ARGV[$#ARGV];} # PUSH (L -> R) [tnc 'dir file dir file' user@remote:/path/to/tar]
+
+my $N = my @L = split(/:/,$REMOTESPEC);
+if ($N != 2) {
+  print STDERR "ERROR: Remote spec [$REMOTESPEC] not formatted correctly.  
+  Requires format [remote_user\@remote_host:/path/to/dir].\n";
+  exit(1);
+}
+
+$REMOTELOGIN = $L[0];
+$REMOTEPATH  = $L[1];
+$REMOTEPATH =~ s/~/'\\\$HOME'/; # WTF??!  3! escapes??!
+my $REMOTEDIR = dirname($REMOTEPATH); 
+$N = @L = split(/\@/,$REMOTELOGIN);
+if ($N != 2) { $REMOTEHOST = $L[0]; }# for naked host 'moo'
+else { $REMOTEHOST = $L[1]; }
+if ($DEBUG) { &debug("REMOTEHOST = [$REMOTEHOST]\n\tREMOTEPATH = [$REMOTEPATH]",__LINE__);}
+
+if ($ASKPASS == 0 && ! -e "$HOME/.ssh/id_rsa.pub") {
+  &setupssh($REMOTELOGIN) # needs what..?  remote user@host.. anything else?
+} elsif ($DEBUG) {&debug("Already have ssh keys generated, so skipping setupssh()", __LINE__);}
+
+# set up the direction of data transfer
+if ($LAST_TERM =~ /:/ && $SEC_LAST !~ /:/){ $L2R = 1; } # local -> remote
+
+# set up the compression engine.
+if (defined $COMPRESS) {
+  if ($COMPRESS =~ /gzip/ || $COMPRESS =~ /pigz/ || $COMPRESS =~ /bzip2/ || $COMPRESS =~ /pbzip2/ || $COMPRESS =~ /xz/) {
+    $COMPRESS = `which $COMPRESS`; chomp $COMPRESS;
+    $COMPRESS .= " -c -q |"; # send output to STDOUT and be quiet and provide the pipe
+    $DCMPR = "-z";
+    if (! $UNPACK && $L2R)   {$REMOTEPATH .= ".gz";}
+    if (! $UNPACK && ! $L2R) {$LOCALFILE  .= ".gz";}
+    if ($COMPRESS =~ /bzip2/ || $COMPRESS =~ /pbzip2/) {
+      $DCMPR = "-j";
+      if (! $UNPACK && $L2R)   {$REMOTEPATH =~ s/\.gz/\.bz2/;}
+      if (! $UNPACK && ! $L2R) {$LOCALFILE  =~ s/\.gz/\.bz2/;}
+    }
+    if ($COMPRESS =~ /xz/) {
+      $DCMPR = "-J";
+      if (! $UNPACK && $L2R)   {$REMOTEPATH =~ s/\.gz/\.xz/;}
+      if (! $UNPACK && ! $L2R) {$LOCALFILE  =~ s/\.gz/\.xz/;}
+    }
+  } elsif ($COMPRESS =~ /lz4/ ) {
+    $COMPRESS = `which $COMPRESS`; chomp $COMPRESS;
+    $COMPRESS .= " -z |"; # send output to STDOUT and provide the pipe
+    $DCMPR = ""; # will have to blank this and provide alt var for piping the tar output
+    $PIPEDCMPR = "lz4 -d | "; # provide the decompression util and the pipe.
+    if (! $UNPACK && $L2R)   {$REMOTEPATH .= ".lz4";}
+    if (! $UNPACK && ! $L2R) {$LOCALFILE  .= ".lz4";}
+  } else {
+    die "\n  ERROR: The compressor you specified [$COMPRESS] isn't supported. 
+     Use one of 'gzip, pigz bzip2, pbzip2, xz, or lz4' 
+     (or edit the code to support [$COMPRESS].)\n";
+  }
+} else {$COMPRESS = "";}
+
+# FORMAT COMMANDS FOR PUSH (L -> R)
+if ($L2R){
+  $REMOTESPEC = $ARGV[$#ARGV];
+  my $fditems = $#ARGV - 1;
+  $PAYLOAD = "";
+  foreach my $i (0..$fditems) {$PAYLOAD .= $ARGV[$i] . " "; }
+  
+  if ($DEBUG) {&debug("Local -> Remote; PAYLOAD = [$PAYLOAD]; REMOTEPATH .= [$REMOTEPATH]",__LINE__);}
+
+# Probe the environment on the remote server to see if bad things can happen
+# If that file exists and > 0 size, fatal error - clean it up.
+# If it's an existing, writable DIR., write the de-tarred files there. 
+# if it doesn't exist and the dir above exists, then assume it's a filename 
+# and write the tarfile there without unpacking it.
+# 1st line tests if it exists and not zero.  if 0, we don't care if we overwrite it
+  $PROBECMD = qq{if [ -f "$REMOTEPATH" -a -s "$REMOTEPATH" ] ; then \
+    echo "FILE_EXISTS" # FATAL - clean it up. \
+elif [ -d "$REMOTEPATH" -a -w "$REMOTEPATH" ] ; then \
+    echo "DIR_EXISTS"  # then write the //untarred// files here \
+elif [ -w "$REMOTEDIR" -a ! -s "$REMOTEPATH" ]; then \
+    echo "WRT_TARBALL" # OK to write the tarball to the specified file. \
+fi};
+  if ($DEBUG) { &debug("PROBECMD = [$PROBECMD]",__LINE__);}
+  $DIRSTATUS=`$SSH $REMOTELOGIN '$PROBECMD'`; chomp $DIRSTATUS; # get remote status.
+  
+  if ($DEBUG) { &debug("ssh returns = [$DIRSTATUS]",__LINE__);}
+  if ($DIRSTATUS =~ /FILE_EXISTS/) { # then it's an error - let user fix things
+   die "SORRY: The remote file you specified:
+      [$REMOTEPATH] 
+  already exists on remote host.  Please give it another name.\n";
+  } 
+  if ($DIRSTATUS =~ /DIR_EXISTS/ && !$UNPACK){ # then untar to files
+    die "ERROR: You've requested 'unpacking' but either the dir [$REMOTEPATH] 
+    doesn't exist or you're trying to write a file that has the same name as a dir\n";
+  } # else $UNPACK = 1 like it was.
+  if ($DIRSTATUS =~ /WRT_TARBALL/ && $UNPACK) { # then DO NOT unpack the tarball
+    die "ERROR: You've asked to unpack the data but the remote dir doesn't exist.\n ";
+  }
+  
+    if ($DEBUG) { &debug("REMOTE DIRSTATUS = [$DIRSTATUS]",__LINE__);}
+    # SET UP TO PUSH DATA
+    if ($UNPACK) {
+      $TNCCMD = qq{$LBASH -c '((sleep $WAIT; $LTAR $EX_FLAG $EX_FILE -cf - $PAYLOAD | $COMPRESS $PV  tee >(tee >($SHASUM > $SHAFL) |wc -c > $WCFL)  | $LNC  -v $REMOTEHOST  $PORT) &)';
+      $SSH -n  $REMOTELOGIN  "$RBASH -c '$RNC -d -v -l $PORT | tee >(tee >($SHASUM > $SHAFL) |wc -c > $WCFL)  | $PIPEDCMPR tar -C $REMOTEPATH $DCMPR -xf -'"};
+      if ($DEBUG) {&debug("[UNPACK=$UNPACK] complete PUSH command:\n[$TNCCMD]",__LINE__); &pause();}
+    } else {
+      $TNCCMD = qq{$LBASH -c '((sleep $WAIT; $LTAR $EX_FLAG $EX_FILE -cf - $PAYLOAD | $COMPRESS  $PV  tee >(tee >($SHASUM > $SHAFL) |wc -c > $WCFL)  | $LNC  -v $REMOTEHOST  $PORT) &)';
+      $SSH -n  $REMOTELOGIN  "$RBASH -c '$RNC -d -v -l $PORT | tee > $REMOTEPATH >(tee >($SHASUM > $SHAFL) |wc -c > $WCFL) '"};
+      if ($DEBUG) { &debug("[UNPACK=$UNPACK] complete PUSH command:\n[$TNCCMD]",__LINE__); &pause();}
+    }
+    system ("$TNCCMD");
+# ---=== PULL DATA ===---
+
+# For the PULL stanza, should we test for local files in the same way that we test for remote ones?
+  } else { #Format for PULL (REMOTE -> LOCAL) (sadly, almost 2 completely different processes)
+
+  $PROBECMD = qq{if [ -f "$LOCALFILE" -a -s "$LOCALFILE" ] ; then \
+      echo "FILE_EXISTS" # FATAL - clean it up. \
+    elif [ -d "$LOCALFILE" -a -w "$LOCALFILE" ] ; then \
+      echo "DIR_EXISTS"  # then write the //untarred// files here \
+    elif [ -w "$LOCALFILE" -a ! -s "$LOCALFILE" ]; then \
+      echo "WRT_TARBALL" # OK to write the tarball to the specified file. \
+    fi};
+    if($DEBUG){ &debug("PROBECMD = [$PROBECMD]");}
+
+    my $LOCALSTATE=`$PROBECMD`;
+    if ($LOCALSTATE =~ /FILE_EXISTS/) { # then it's an error - let user fix things
+    die "SORRY: The LOCAL file you specified:
+	[$LOCALFILE] 
+    already exists on LOCAL host.  Please give it another name.\n";
+    } elsif ($LOCALSTATE =~ /DIR_EXISTS/){ # then untar to files
+      #$UNPACK = 1;
+    } elsif ($LOCALSTATE =~ /WRT_TARBALL/) { # then DO NOT unpack the tarball
+      $UNPACK = 0;
+    }
+    $L2R = 0; 
+    if ($UNPACK) {
+      $TNCCMD = qq{(($SSH  $REMOTELOGIN "$RBASH -c '$LTAR $EX_FLAG $EX_FILE -cf - $REMOTEPATH | $COMPRESS  tee >(tee >($SHASUM > $SHAFL) |wc -c > $WCFL)  | $RNC  -v -l   $PORT'") &); 
+      sleep $WAIT; $LBASH -c "$LNC  -v  $REMOTEHOST  $PORT | $PV  tee >(tee >($SHASUM > $SHAFL) |wc -c > $WCFL)  | $PIPEDCMPR tar -C $LOCALFILE $DCMPR -xf -"};
+      if ($DEBUG) { &debug("[UNPACK=$UNPACK] [LOCALFILE=$LOCALFILE] complete PULL command:\n[$TNCCMD]",__LINE__); pause();}
+    } else {
+      $TNCCMD = qq{(($SSH  $REMOTELOGIN "$RBASH -c '$LTAR $EX_FLAG $EX_FILE -cf - $REMOTEPATH | $COMPRESS tee >(tee >($SHASUM > $SHAFL) |wc -c > $WCFL)  | $RNC  -v -l   $PORT'") &); 
+      sleep $WAIT; $LBASH -c "$LNC  -v  $REMOTEHOST  $PORT | $PV  tee >(tee >($SHASUM > $SHAFL) |wc -c > $WCFL)  > $LOCALFILE"};
+      if ($DEBUG) { &debug("[UNPACK=$UNPACK] complete PULL command:\n[$TNCCMD]",__LINE__); pause();}
+    }
+    system("$TNCCMD");
+  }
+  my $LSHA = `cat $SHAFL; rm -f $SHAFL;`; chomp $LSHA;
+  my $LWC = `cat $WCFL; rm -f $WCFL;`; chomp $LWC;
+  my $RSHA = `ssh $REMOTELOGIN 'cat $SHAFL; rm -f $SHAFL;'`; chomp $RSHA;
+  if ($LSHA eq $RSHA) { print "\n\nSUMMARY: Bytes sent:  [$LWC]\n  Local $SHASUM  [$LSHA]\n  Remote $SHASUM [$RSHA]
+  SHA checksums match, but sizes not confirmed.
+  Please verify that the remote data is the correct size.
+  (Intermediate errors can cause data truncation).\n";}
+  else {print "\n\nWARN: Bytes sent: [$LWC]\nLocal $SHASUM [$LSHA]\n and remote $SHASUM [$RSHA]\n SHA checksums DO NOT match. Something DEFINITELY wrong.\n";}
+exit(0);
+
+########################## subroutines ######################################
+sub testapps ($) {
+  my @arr = @_;
+  my $arrsz = $#arr;
+  my $log = ">$HOME/.tnc.test";
+  open(LOG, "$log") or die "Can't open the log file: [$log]!\n";
+  # collect a bunch info from the local host for debugging purposes
+  # and print all the Info to a log file.
+  my $uname 	= `uname -a`;
+  my $etcissue 	= `cat /etc/issue`;
+  my $ifconfig 	= `ifconfig`;
+  my $shell 	= `printenv SHELL`;
+  my $app_path = my $app_ver = "";
+  print LOG "UNAME: $uname\n";
+  print LOG "/etc/issue: $etcissue\n";
+  print LOG "IFCONFIG: $ifconfig\n";
+  print LOG "SHELL: $shell\n";
+  print LOG "";
+  # now run thru the app/util test
+  for (my $i = 0; $i<= $arrsz; $i++) {
+    my $app = $arr[$i];
+    print "INFO: testing [$app]\n";
+    #pause();
+    $app_path = `which $app`; chomp $app_path;
+    if ($app_path eq "") {
+      print LOG "\n!!WARN: [$app] isn't on PATH.\n\n"; 
+      print "\n!!WARN: [$app] isn't on PATH.\n\n"; 
+    } else { 
+      print LOG "[$app]\t[$app_path]\t";
+      # now the version
+      if ($app =~ /tar/ || $app =~ /wc/ ||  $app =~ /less/){
+	$app_ver =  `$app --version | head -1`;
+      } elsif ( $app =~ /shasum/) {  # $app =~ /ifstat/ || 
+	$app_ver =  `$app -v | head -1`;
+      } elsif ($app eq "nc") {$app_ver = `$app 2>&1 | head -1`;}
+      elsif ($app eq "xz") {$app_ver =  `$app -V | head -1`;} 
+      elsif ($app =~ /ssh-/) {$app_ver =  "UNDEFINED";} 
+      else {$app_ver = `$app -V 2>&1 | head -1`;}
+      chomp $app_ver;
+      print LOG "[$app_ver]\n";
+    }
+  }
+}
+
+
+
+sub debug ($$) {
+  my $msg = shift;
+  my $line = shift;
+  print "DEBUG: $msg [$line]\n";
+}
+
+# setupssh($UserAtRemoteHost) 
+sub setupssh($) {
+  use vars qw($RemoteUser $RemoteHost $UserAtRemoteHost $sshcopyid $ssh_pub_local);
+  $UserAtRemoteHost = shift;
+  # disambiguate User and RemoteHost
+#   my $N = my @L = split /\@/$UserAtRemoteHost/;
+#   if ($N != 2) {die "FATAL: the remote user/host string you supplied [$UserAtRemoteHost] 
+#   doesn't appear to match the required 'User\@Host' format. Please try again.\n";}
+#   else { $RemoteUser = $L[0]; $RemoteHost= $L[1]; }
+
+  # Check and fix ssh keys
+  # still needs to figure out if ssh works ok.
+  # first, is there a ~/.ssh dir? If not, run the ssh_keygen util.
+
+  if (! -e "$HOME/.ssh/id_rsa.pub") { # then user hasn't config'ed a ssh key
+    print "INFO: you don't appear to have ssh keys configured at all.  
+    Shared ssh keys allows you to ssh securely to the remote target 
+    [$UserAtRemoteHost] without entering a password.  
+    If you want me to create them for you, hit [Enter] and answer the 
+    questions from 'ssh-keygen' and (possibly) 'ssh-copy-id'.
+    
+    If not, exit (^C) and use the '--askpass' option which will skip the ssh setup.";
+    pause();
+    print "INFO: OK, creating ssh keys...\n";
+    system("ssh-keygen -b 2048 -N ''");
+    
+  }
+  # so the keys are now generated, but now have to copy them to the remote host.
+  # actually, we already know this due to the testing, but for now leave it in.
+  $sshcopyid = `which ssh-copy-id`; chomp $sshcopyid;
+  if ($DEBUG) {&debug("sshcopyid = [$sshcopyid]");}
+
+  if ($sshcopyid =~ /ssh-copy-id/) { # via ssh-copy-id
+    if ($DEBUG){print "DEBUG: ssh-copy-id cmd = [$sshcopyid  $UserAtRemoteHost]\n";}
+    system("$sshcopyid  $UserAtRemoteHost");
+  } else { # or do it manually
+    my $THISHOST = `hostname`; chomp $THISHOST;
+    $ssh_pub_local .= "id_rsa.pub" . "_" . $THISHOST;
+    if ($DEBUG) {print "DEBUG: ssh_pub_local = [$ssh_pub_local]\n";}
+    system ("cp $HOME/.ssh/id_rsa.pub ~/$ssh_pub_local");
+    if ($DEBUG) {print "DEBUG: local ssh key file to copy = [$ssh_pub_local]\n";}
+    print "INFO: Your system doesn't have 'ssh-copy-id' so I'll have to do this manually.
+    You'll now have to enter the remote host's password twice to set it up.\n";
+    system("scp $ssh_pub_local $UserAtRemoteHost:~");
+    system("ssh $UserAtRemoteHost 'mkdir -p .ssh; cat $ssh_pub_local >> .ssh/authorized_keys; chmod og-rwx .ssh/authorized_keys'");
+    my $testcmd = "scp $UserAtRemoteHost:~/$ssh_pub_local .; diff -s ~/$ssh_pub_local ~/.ssh/id_rsa.pub;";
+    if ($DEBUG) { &debug("scp cmd = [$testcmd]",__LINE__ );}
+    my $diff = `$testcmd`;
+    if ($diff =~ /identical/) {
+      print "INFO: The ssh keys appear to have transferred OK.\n";
+    } else {
+      die "FATAL: The ssh key transfer seems to have failed for some reason.  
+      Please investigate manually.\n";
+    }
+  }
+  if ($DEBUG) {&debug("About to exit sub setupssh",__LINE__);}
+  
+} # END OF SUB
+
+sub usage {
+   my $helpfile="$HOME/tnc.tmp";
+   open HLP, ">$helpfile" or die "Can't open the summary file\n";
+   my $helptxt = <<HELP;
+
+tnc is a Perl utility to simplify the use of netcat to transfer
+files  between hosts.  It automates a number of the setup commands that
+make this very efficient protocol so awful to set up.  It can be used
+like scp but it is much faster than scp, depending on the connection and 
+types of files.  Typically it's 2x - 6x faster. And ~4x faster than rsync
+if being used for the initial transfer.
+
+tnc will attempt to set up 2048bit RSA ssh keys for you if they don't
+exist on the  the local host which will require entering the remote login
+password 2x to set up  the keys.  If you want to avoid this, use the 
+'--askpass' option, which will not set up ssh-keys, but WILL use established 
+ssh keys if they already exist. tnc does not work reliably without shared ssh 
+keys.
+
+Unless you use the '--unpack' option, files to be transferred (even 1) are
+concatenated to a tar file which is sent and then left as a tar file on
+the other end of  the connection.  ie the endpoint for both push and pull
+data transfers will  be *tar files* (appended with the appro suffix if you
+use the '--compress' option).
+
+It can be used to both push and pull data from a remote connection, using
+only the static IP end. 
+
+WARNINGS:
+- tnc DOES NOT ENCRYPT, nor does it compress data without being asked, 
+so it's only meant for NON-SENSITIVE data that can be sent in the clear. 
+Remote  connections are initiated via ssh, so the actual connection setup
+is encrypted. Because it uses netcat's open ports it also performs SHA 
+checksums on the data exchanged to make sure that the data stream has not 
+been poisoned or corrupted.
+
+- There are at least 3 versions of netcat in use: nc6, nc.openbsd,
+and nc.traditional.  tnc seems to be compatible with both the OpenBSD and GNU 
+versions, which are the defaults on most systems.
+
+- tnc does a check of all the apps it needs on the local side and will emit 
+a warning if one does not exist.  Once the 1st warning is done, it will not
+check again unless the log file (~/.tnc.test) is removed.
+
+- tnc requires ports to communicate over.  Some distros by default close all 
+network ports.  You will have to open some of them for tnc to work - you can 
+specify the connection port with '-p #'; other wise it will choose a random port
+in the range of 10000-20000.
+
+- tnc uses the piped subprocess function of bash (tee >(shasum)) to do 
+inline SHA hash checking, so if your system lacks a recent bash, it may fail.
+Note that identical SHA hashes only verify that the same bytes exist on both
+ends.  Premature failure can truncate data, so the SUMMARY now includes the 
+# of bytes that were sent over the network as well.
+
+It supports the following options
+--askpass(off) .. use passwords, not ssh keys; don't try to set up ssh keys. 
+                  If functional ssh keys DO exist, they will be used. This fails
+                  often and tnc really only works well if you have ssh keys set 
+                  up, which tnc will offer to do for you.
+--compress(off) . asks for compression to be turned on at the sending side, 
+		  using one of gzip || bzip2 || pigz || pbzip2 || xz || lz4
+		  The receiving (decompression) side uses the serial version, 
+		  even if the parallel version is used on the sending side.
+		  This invokes the 'z,j, or J' option to tar to use the requested
+		  [de]compressor engine or passes it to the lz4 decompressor.
+		  Helps significantly on low bandwidth connections (wifi), but 
+		  generally doesn't help on GbE networks.  Depends on the 
+		  compressibility of the data on 100Mb connections, altho the lz4
+		  option is best. Endpoint names will be suffixed with the appro
+		  suffix (.gz, .bzip2, .xz, etc if this option is used, so don't 
+		  'pre-suffix' the name.  If you do, 'name.xz' will be changed 
+		  to 'name.xz.xz'
+--port(12345) ... sets the local and remote PORTs to this #. If not specified, 
+                  tnc will use a random port between 10K and 20K.
+--help .......... emits this text
+--unpack(off) ... unpacks the transferred files at their endpoint. You specify 
+                  the dir under which it's supposed to be unpacked as the 
+                  remote target. If there is a writable dir of that name, 
+                  the stream will be NOT be unpacked into it unless the 
+                  '--unpack' option is used.
+-x='regex ' ..... equiv to '--exclude=' below
+--exclude='regex regex regex..'(*) (passthru to tar) excludes files matching the 
+                  regexes from being included in the tar. Unlike the tar option, 
+                  you can put all the regexes in a space-delimited string.
+--exclude-from="exclude_file" (*) (passthru to tar) read a file of filenames or 
+                  regexes to omit in the transfer.  
+(*) the files filtered from the '--exclude* options are additive, so if you have 
+                  a set of files that you would normally exclude in 'exclude.me' 
+                  and you wanted to exclude a few more, you could add them to
+                  the exclude list with --exclude="regex."
+--debug(off) .... very verbose about what's going on.
+
+Simple usage:
+
+Pushing data TO a remote server:
+ ------------------------------
+(sources can be a mixture of files and dirs)
+tnc dir1  file1  dir2 file2   user\@remotehost:/path/to/remote.tar
+ or
+tnc --unpack file1 file2 file3  user\@remotehost:/path/to/unpack/dir
+ or
+tnc -x='*.gif *.html' --compress=xz geo*.dat  user\@remotehost:/path/to/remote.tar
+(which will filter out all gif and html files and leave the remote archive as 
+'/path/to/remote.tar.xz'
+
+Pulling data FROM a remote server:
+ --------------------------------
+tnc --exclude-from="exclude.me" user\@remotehost:'~/dir1/  /path/to/file* ~/dir2/' \
+/local/path/to/tarball
+
+The above line excludes files based on the regexes in the file 'exclude.me' in 
+the current dir.  Note the single quotes surrounding the remote file spec.  
+You can use this to specify discontiguous files and dirs to pull (and you must 
+use single quotes to specify the data to pull).
+
+The dynamic display during a transfer is from 'pv' and shows:
+
+158MB 0:00:07 [ 644kB/s]
+------------------------
+ MB    time     instant
+sent   elapsed  bandwidth
+
+NB: tnc requires a static (or at least identifiable) IP on only one end of the 
+connection.  If you are at home, connecting thru a wireless router, and obtaining 
+your IP address dynamically, tnc should work as well, since the work is initiated 
+from the remote (static) IP #.
+
+HELP
+
+print HLP $helptxt;
+close HLP;
+
+system("less -S $helpfile");
+unlink $helpfile;
+die "Did that help? Tell me how to make it better. <hjmangalam\@gmail.com>\n"
+}
+
+sub pause {
+   print "\nWaiting for [Enter]\n";
+   my $tmp = <STDIN>;
+}

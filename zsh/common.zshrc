@@ -194,3 +194,6 @@ if [ ! -z "$KEYFILES" ]; then
     # echo "Found keys! Adding to ssh-agent"
     eval $(keychain --eval --quiet --agents ssh $(echo $KEYFILES))
 fi
+
+# Add custom scripts to PATH
+export PATH="$HOME/dotfiles/bin:$PATH"
