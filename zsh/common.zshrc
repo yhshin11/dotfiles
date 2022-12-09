@@ -104,6 +104,14 @@ alias ta='tmux attach -t' # Attach to tmux session
 alias tt='tmux attach -t' # FIXME: Create if doesn't exist. Otherwise attach
 alias ts='tmux split-window -h' # Split current window and run command
 
+# Command to fix ssh-agent issues in tmux
+# https://blog.testdouble.com/posts/2016-11-18-reconciling-tmux-and-ssh-agent-forwarding/
+fixssh() {
+    eval $(tmux show-env -s |grep '^SSH_')
+}
+
+
+
 em() {
     emacsclient -n -e "(if (> (length (frame-list)) 1) 't)" | grep -q t
     if [ "$?" = "1" ]; then
