@@ -180,6 +180,9 @@ export TERM=xterm-256color
 export DOTFILES="$HOME/dotfiles"
 # export STOW_DIR=$DOTFILES
 
+# python poetry completion
+fpath+=~/.zfunc
+
 # aws-cli command completion
 # See: https://docs.aws.amazon.com/cli/latest/userguide/cli-configure-completion.html#cli-command-completion-linux
 autoload bashcompinit && bashcompinit

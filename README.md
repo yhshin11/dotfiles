@@ -34,6 +34,8 @@ ln -s ~/dotfiles/git/.gitignore_global ~/.gitignore_global
 git clone --depth=1 https://github.com/romkatv/powerlevel10k.git ~/powerlevel10k
 # Main zshrc file - Calls other zshrc files
 ln -s ~/dotfiles/zsh/.zshrc ~/.zshrc
+# Shell functions
+ln -s ~/dotfiles/zsh/.zfunc ~/.zfunc
 # Change default shell
 chsh -s $(which zsh)
 
@@ -92,6 +94,11 @@ cd -
 ################
 ln -s ~/dotfiles/vim/.vimrc ~/.vimrc
 ln -s ~/dotfiles/nvim/.config/nvim/ ~/.config/nvim
+
+################
+# Python poetry
+################
+curl -sSL https://install.python-poetry.org | python3 -
 ```
 
 ```bash
