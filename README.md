@@ -64,6 +64,10 @@ mkdir -p $XDG_CONFIG_HOME
 mkdir -p $XDG_DATA_HOME
 mkdir -p $XDG_CACHE_HOME
 
+# [Optional] Regolith
+mkdir -p $XDG_CONFIG_HOME/regolith2
+ln -s ~/dotfiles/regolith2/Xresources $XDG_CONFIG_HOME/regolith2/Xresources
+
 ################
 # tmux config
 ################
@@ -145,4 +149,14 @@ pip install pytorch-lightning
 ```bash
 # kmonad setup
 ln -s ~/dotfiles/kmonad $XDG_CONFIG_HOME
+```
+
+## Testing
+
+```bash
+# polybar config
+ln -s ~/dotfiles/polybar $XDG_CONFIG_HOME
+
+# keyd setup 
+sudo ln -s ~/dotfiles/keyd/default.conf /etc/keyd
 ```
