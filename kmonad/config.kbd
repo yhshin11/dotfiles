@@ -1,0 +1,49 @@
+(defcfg
+  ;; Find your keyboard device file in `/dev/input/by-id/`
+  input  (device-file "/dev/input/by-id/usb-Logitech_USB_Receiver-if01-event-kbd")
+  output (uinput-sink "KMonad kbd")
+  ;; Keys that are not specified in `defsrc` will retain original behavior
+  fallthrough true
+  )
+
+;; Blueprint for keyboard
+;; (defsrc
+;;   esc   f1   f2   f3   f4   f5   f6   f7   f8   f9   f10  f11   f12    pause  prnt  ins  del
+;;   `     1    2    3    4    5    6    7    8    9    0    -     =      bspc              home
+;;   tab   q    w    e    r    t    y    u    i    o    p    [     ]      ret               pgup
+;;   caps  a    s    d    f    g    h    j    k    l    ;    '     \                        pgdn
+;;   lsft  z    x    c    v    b    n    m    ,    .    /    rsft         up                end
+;;   lctl  lmet lalt      spc       ralt cmps rctl                 left   down   rght
+;;   )
+
+;; Customizations
+;; Simple capslock to control
+;; (deflayer base
+;;   esc     f1    f2   f3   f4   f5   f6   f7   f8   f9   f10  f11   f12    pause  prnt  ins  del
+;;   `       1     2    3    4    5    6    7    8    9    0    -     =      bspc              home
+;;   tab     q     w    e    r    t    y    u    i    o    p    [     ]      ret               pgup
+;;   lctl    a     s    d    f    g    h    j    k    l    ;    '     \                        pgdn
+;;   lsft    z     x    c    v    b    n    m    ,    .    /    rsft         up                end
+;;   lctl    lmet  lalt      spc       ralt cmps rctl                 left   down   rght
+;;   )
+
+;; Custom behavior
+(defalias
+  ;; parens      (tap-macro \( P5 \) P5 Left P5)
+  ;; tap-hold-next rather than tap-next, to prevent accidental
+  ;; insertion of parentheses while typing capital letters
+  ;; left-shift  (tap-hold-next 700 @parens LeftShift)
+  ;; right-shift (tap-hold-next 700 @parens RightShift)
+  caps       (tap-hold-next-release 200 CapsLock LeftCtrl))
+
+
+;; Keys to customize
+(defsrc
+  LeftCtrl
+  CapsLock
+  )
+  
+(deflayer default
+  LeftCtrl
+  @caps
+  )
