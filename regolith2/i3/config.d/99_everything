@@ -1,0 +1,8 @@
+# Override everything
+assign [class="Code"] $ws3
+assign [class="KeePassXC"] $ws7
+assign [class="Spotify"] $ws8
+
+# exec --no-startup-id $HOME/.config/polybar/launch.sh
+exec_always --no-startup-id "sleep 1 && kmonad ~/.config/kmonad/config.kbd"
+exec_always --no-startup-id "notify-send Starting i3..."
