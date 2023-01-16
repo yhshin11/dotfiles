@@ -18,6 +18,8 @@ sudo apt install -y tmux
 # Link to Appimage binaries are available here:
 # https://github.com/tmux/tmux/wiki/Installing
 sudo apt install -y emacs
+# tldr
+sudo apt install tldr
 
 ################
 # Clone dotfiles
@@ -49,6 +51,8 @@ sudo apt-get install build-essential
 
 # [Optional] Install keychain to manage ssh-keys
 sudo apt install keychain
+# [Optional] tldr hints for linux commands, e.g. `tldr apt`
+sudo apt install tldr
 ```
 
 ```bash
@@ -78,8 +82,6 @@ ln -s ~/dotfiles/tmux/.tmux.conf.local ~/.tmux.conf.local
 # fzf
 git clone --depth 1 https://github.com/junegunn/fzf.git ~/.fzf
 ~/.fzf/install
-# tldr
-pip install tldr
 # fasd
 mkdir /tmp/fasd
 cd /tmp/fasd
