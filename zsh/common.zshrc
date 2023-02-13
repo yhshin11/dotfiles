@@ -9,8 +9,11 @@
 HISTFILE=~/.zsh_history
 HISTSIZE=10000
 SAVEHIST=10000
+# Incrementally append to command history file
 setopt INC_APPEND_HISTORY
+# Ignore duplicate entries in command history
 setopt HIST_IGNORE_ALL_DUPS
+# Do not save command to history if it starts with a space character
 setopt HIST_IGNORE_SPACE
 
 # XDG - set defaults as they may not be set
