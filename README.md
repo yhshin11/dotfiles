@@ -18,8 +18,6 @@ sudo apt install -y tmux
 # Link to Appimage binaries are available here:
 # https://github.com/tmux/tmux/wiki/Installing
 sudo apt install -y emacs
-# tldr
-sudo apt install tldr
 
 ################
 # Clone dotfiles
@@ -41,9 +39,9 @@ ln -s ~/dotfiles/zsh/.zfunc ~/.zfunc
 # Change default shell
 chsh -s $(which zsh)
 
-# miniconda
-wget https://repo.anaconda.com/miniconda/Miniconda3-latest-Linux-x86_64.sh
-bash Miniconda3-latest-Linux-x86_64.sh
+# mambaforge - faster drop in replacement for conda/miniconda
+curl -L -O "https://github.com/conda-forge/miniforge/releases/latest/download/Mambaforge-$(uname)-$(uname -m).sh"
+bash Mambaforge-$(uname)-$(uname -m).sh
 # IMPORTANT: Restart shell after conda installation
 
 # make and other build utils

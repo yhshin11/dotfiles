@@ -135,26 +135,45 @@ case $TERM in
 esac
 
 
+# # >>> conda initialize >>>
+# # !! Contents within this block are managed by 'conda init' !!
+# __conda_setup="$('/home/yhshin/miniconda3/bin/conda' 'shell.zsh' 'hook' 2> /dev/null)"
+# if [ $? -eq 0 ]; then
+#     eval "$__conda_setup"
+# else
+#     if [ -f "/home/yhshin/miniconda3/etc/profile.d/conda.sh" ]; then
+#         . "/home/yhshin/miniconda3/etc/profile.d/conda.sh"
+#     else
+#         export PATH="/home/yhshin/miniconda3/bin:$PATH"
+#     fi
+# fi
+# unset __conda_setup
+# # <<< conda initialize <<<
+
 # >>> conda initialize >>>
 # !! Contents within this block are managed by 'conda init' !!
-__conda_setup="$('/home/yhshin/miniconda3/bin/conda' 'shell.zsh' 'hook' 2> /dev/null)"
+__conda_setup="$('/home/yhshin/mambaforge/bin/conda' 'shell.zsh' 'hook' 2> /dev/null)"
 if [ $? -eq 0 ]; then
     eval "$__conda_setup"
 else
-    if [ -f "/home/yhshin/miniconda3/etc/profile.d/conda.sh" ]; then
-        . "/home/yhshin/miniconda3/etc/profile.d/conda.sh"
+    if [ -f "/home/yhshin/mambaforge/etc/profile.d/conda.sh" ]; then
+        . "/home/yhshin/mambaforge/etc/profile.d/conda.sh"
     else
-        export PATH="/home/yhshin/miniconda3/bin:$PATH"
+        export PATH="/home/yhshin/mambaforge/bin:$PATH"
     fi
 fi
 unset __conda_setup
+
+if [ -f "/home/yhshin/mambaforge/etc/profile.d/mamba.sh" ]; then
+    . "/home/yhshin/mambaforge/etc/profile.d/mamba.sh"
+fi
 # <<< conda initialize <<<
 
 ################################
 # Environments
 ################################
 # Activate base conda environment
-conda activate base
+mamba activate base
 # Activate virtualenvwrapper
 export WORKON_HOME=$HOME/.virtualenvs
 export PROJECT_HOME=$HOME/Devel
