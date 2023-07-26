@@ -165,3 +165,18 @@ ln -s ~/dotfiles/polybar $XDG_CONFIG_HOME
 # keyd setup 
 sudo ln -s ~/dotfiles/keyd/default.conf /etc/keyd
 ```
+
+## micromamba to replace conda/mamba
+
+Reference:
+https://mamba.readthedocs.io/en/latest/installation.html
+
+```python
+# Installation script for linux
+"${SHELL}" <(curl -L micro.mamba.pm/install.sh)
+# micromamba doesn't install python automatically
+# Must explicitly specify channel with -c
+micromamba install python=3.10 -y -c conda-forge
+# Add default channel
+micromamba config append channels conda-forge --env
+```
