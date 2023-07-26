@@ -160,3 +160,11 @@ settings.theme = `
     font-size: 20pt;
 }`;
 // click `Save` button to make above settings to take effect.</ctrl-i></ctrl-y>
+
+// Lurking sites
+settings.lurkingPattern = /.*google\.com|.*reddit\.com|https:\/\/github\.com|.*confluence.*/i;
+
+// Override default
+api.mapkey('t', 'Choose a tab with omnibar', function() {
+    api.Front.openOmnibar({type: "Tabs"});
+});
