@@ -106,6 +106,7 @@ alias tn='tmux new -s' # Open new tmux session
 alias ta='tmux attach -t' # Attach to tmux session
 alias tt='tmux attach -t' # FIXME: Create if doesn't exist. Otherwise attach
 alias ts='tmux split-window -h' # Split current window and run command
+alias conda='micromamba' # Alias `conda` to conda/mamba/micromamba as needed
 
 # Command to fix ssh-agent issues in tmux
 # https://blog.testdouble.com/posts/2016-11-18-reconciling-tmux-and-ssh-agent-forwarding/
@@ -152,28 +153,46 @@ esac
 
 # >>> conda initialize >>>
 # !! Contents within this block are managed by 'conda init' !!
-__conda_setup="$('/home/yhshin/mambaforge/bin/conda' 'shell.zsh' 'hook' 2> /dev/null)"
+# __conda_setup="$('/home/yhshin/mambaforge/bin/conda' 'shell.zsh' 'hook' 2> /dev/null)"
+# if [ $? -eq 0 ]; then
+#     eval "$__conda_setup"
+# else
+#     if [ -f "/home/yhshin/mambaforge/etc/profile.d/conda.sh" ]; then
+#         . "/home/yhshin/mambaforge/etc/profile.d/conda.sh"
+#     else
+#         export PATH="/home/yhshin/mambaforge/bin:$PATH"
+#     fi
+# fi
+# unset __conda_setup
+
+# if [ -f "/home/yhshin/mambaforge/etc/profile.d/mamba.sh" ]; then
+#     . "/home/yhshin/mambaforge/etc/profile.d/mamba.sh"
+# fi
+# <<< conda initialize <<<
+
+
+# >>> mamba initialize >>>
+# !! Contents within this block are managed by 'mamba init' !!
+export MAMBA_EXE="/home/yhshin/.local/bin/micromamba";
+export MAMBA_ROOT_PREFIX="/home/yhshin/micromamba";
+__mamba_setup="$("$MAMBA_EXE" shell hook --shell zsh --prefix "$MAMBA_ROOT_PREFIX" 2> /dev/null)"
 if [ $? -eq 0 ]; then
-    eval "$__conda_setup"
+    eval "$__mamba_setup"
 else
-    if [ -f "/home/yhshin/mambaforge/etc/profile.d/conda.sh" ]; then
-        . "/home/yhshin/mambaforge/etc/profile.d/conda.sh"
+    if [ -f "/home/yhshin/micromamba/etc/profile.d/micromamba.sh" ]; then
+        . "/home/yhshin/micromamba/etc/profile.d/micromamba.sh"
     else
-        export PATH="/home/yhshin/mambaforge/bin:$PATH"
+        export  PATH="/home/yhshin/micromamba/bin:$PATH"  # extra space after export prevents interference from conda init
     fi
 fi
-unset __conda_setup
-
-if [ -f "/home/yhshin/mambaforge/etc/profile.d/mamba.sh" ]; then
-    . "/home/yhshin/mambaforge/etc/profile.d/mamba.sh"
-fi
-# <<< conda initialize <<<
+unset __mamba_setup
+# <<< mamba initialize <<<
 
 ################################
 # Environments
 ################################
 # Activate base conda environment
-mamba activate base
+micromamba activate base
 # Activate virtualenvwrapper
 export WORKON_HOME=$HOME/.virtualenvs
 export PROJECT_HOME=$HOME/Devel
@@ -216,17 +235,17 @@ export GEM_HOME="$HOME/gems"
 export PATH="$HOME/gems/bin:$PATH"
 
 # keychain to manage ssh-agent
-KEYFILES=""
-if [[ -f $HOME/.ssh/id_rsa ]]; then
-    KEYFILES="id_rsa ${KEYFILES}"
-fi
-if [[ -f $HOME/.ssh/id_ed25519 ]]; then
-    KEYFILES="id_ed25519 ${KEYFILES}"
-fi
-if [ ! -z "$KEYFILES" ]; then
-    # echo "Found keys! Adding to ssh-agent"
-    eval $(keychain --eval --quiet --agents ssh $(echo $KEYFILES))
-fi
+# KEYFILES=""
+# if [[ -f $HOME/.ssh/id_rsa ]]; then
+#     KEYFILES="id_rsa ${KEYFILES}"
+# fi
+# if [[ -f $HOME/.ssh/id_ed25519 ]]; then
+#     KEYFILES="id_ed25519 ${KEYFILES}"
+# fi
+# if [ ! -z "$KEYFILES" ]; then
+#     # echo "Found keys! Adding to ssh-agent"
+#     eval $(keychain --eval --quiet --agents ssh $(echo $KEYFILES))
+# fi
 
 # Add custom scripts to PATH
 export PATH="$HOME/dotfiles/bin:$PATH"
